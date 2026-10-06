@@ -1,0 +1,12 @@
+-- FIRST-SETUP TEMPLATE. Run in the Supabase SQL editor as postgres.
+-- Grants attach automatically when the person signs in with this exact, verified email.
+-- Step 1: create the login in Supabase Dashboard > Authentication > Users > Add user (tick "Auto Confirm User").
+-- Step 2: replace the email, run this, then sign in to the app.
+
+insert into public.admin_grants (email, role, university_id)
+values ('platform-admin@example.com', 'PLATFORM_ADMIN', null)
+on conflict do nothing;
+
+insert into public.admin_grants (email, role, university_id)
+select 'university-admin@example.com', 'UNIVERSITY_ADMIN', id from public.universities where slug = 'futa'
+on conflict do nothing;

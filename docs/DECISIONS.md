@@ -1,0 +1,52 @@
+# Decisions
+- D-001: No emojis in the app. Enforced by scripts/check-no-emoji.mjs. Status is shown with text plus shape markers.
+- D-002: Money is integer kobo only (src/lib/money.ts).
+- D-003: Authoring sandbox had no network, so dependencies were not installed or verified. Versions are ranges; owner runs npm install and npm run verify.
+- D-004: Multi-tenancy via university_id on tenant tables and RLS based on membership tables (Milestone 01).
+- D-005: Verification status is separate from account status.
+- D-006: Active universities are publicly readable (needed by the registration form); all other data is private by default.
+- D-007: System font stack instead of downloaded web fonts, to avoid build-time network dependence.
+- D-008: Verification status is stored on university_memberships only; students/drivers hold role details (avoids duplicated state).
+- D-009: Registration creates all rows in a database trigger on auth.users so it is atomic. Only STUDENT/DRIVER, always PENDING.
+- D-010: Verification decisions go through review_membership() (security definer); platform admins do not verify members, the university does.
+- D-011: Password policy is at least 10 characters with a letter and a number, enforced in the server action.
+- D-012: Post-login destination is /account until role dashboards exist (Milestone 02).
+- D-013: Admin accounts are granted by verified email through admin_grants (no public admin sign-up, no passwords handled by us).
+- D-014: /account is the post-login dispatcher; role areas guard themselves server-side.
+- D-015: A university admin sees one university at a time (the first assigned). Multi-university admin switching is deferred.
+- D-016: Platform admins manage universities and assign university admins but do not verify students or drivers; the university does.
+- D-017: Developer-facing status, milestone notes and the styleguide are not shown to end users (styleguide returns 404 in production).
+- D-018: Routes and stops are deactivated, never deleted, so later ride and payment history can reference them. Route stops and schedules can be removed.
+- D-019: Stop order is stored as stop_order with a deferrable unique constraint so two stops can swap in one statement.
+- D-020: The UI shows only real data. Features that do not exist yet (payments, credit, claims, QR) have no placeholder panels or disabled buttons.
+- D-021: Only real universities are stored in the live database; isolation tests create temporary universities inside rolled-back transactions.
+- D-022: The demo document was removed; manual workflows live in docs/TESTING.md.
+- D-023: A shuttle always has exactly one vehicle (vehicles table kept separate for later vehicle changes). Shuttle and vehicle are created together in one transaction.
+- D-024: Driver assignment keeps history. Moving a driver ends their previous assignment. Suspending or rejecting a driver ends it automatically.
+- D-025: QR tokens are stored as issued (needed to reprint) in a table only that university's administrators can read. Codes are looked up through a security-definer function that treats all failures alike.
+- D-026: The 8 character manual code is 32 bits and relies on the approved-member check; rate limiting is part of the security hardening milestone.
+- D-027: Fares are immutable versions. A change creates a new fare and ends the old one; rides will reference the fare id so history never moves.
+- D-028: Scope for now is the university default and per-route fares. Zones and shuttle categories are not built; the fares table can gain a scope column later without touching existing rows.
+- D-029: Fare times are entered in West Africa Time (UTC+1, no daylight saving) and stored as timestamptz.
+- D-030: Security headers are set in next.config.mjs; camera is permitted for the site itself so QR scanning works. A Content Security Policy is left to the hardening milestone because it needs nonces with the Next.js runtime.
+- D-031: Provider and environment are set by the server when a payment becomes PENDING, never by the client, so a payment cannot be self-labelled as production.
+- D-032: A separate idempotency_keys table is not used; uniqueness of (student, key) on payment_intents plus reuse of an open payment for the same shuttle gives the same protection with fewer moving parts.
+- D-033: provider_transactions is folded into payment_intents (provider reference) and provider_events (every notification). A separate table can be added for transfers and settlement.
+- D-034: The webhook, the return page and the test checkout all call the same reconcile function, which asks the provider for the truth.
+- D-035: The service-role key is used only for provider-driven work with no signed-in user. It is read from the server environment and never sent to the browser.
+- D-036: Builds do not fail on lint or, by default, on type errors (STRICT_TYPES=true turns type errors into build failures). Reason: the code could not be compiled in the authoring environment, and a deployment must not be blocked by an unverified check. Run npm run lint and npm run typecheck before pushing.
+- D-037: middleware.ts follows the Supabase documented pattern with explicit cookie types, builds redirects from absolute URLs, and treats a failed session check as signed out.
+- D-038: server-only is an explicit dependency; qrcode is marked a server external package.
+- D-039: A claim is created directly as DRIVER_PENDING (the student has nothing to draft), so DRAFT and SUBMITTED stay unused in the enum.
+- D-040: A confirmed claim immediately records a cash ride; the credit entry follows in the ledger milestone.
+- D-041: Disputes are limited to rejected claims and one per claim. General payment and ride disputes can reuse the table later.
+- D-042: Stay on Next.js 15 (latest 15.x), React 19, TypeScript 5.9, ESLint 9, Tailwind 4. Reason: it is the line the code was written against, Vercel supports it, and every package in the set is mutually compatible. Next 16, TypeScript 6 and ESLint 10 are separate migrations, not part of a routine update.
+- D-043: No Node version manager. The .nvmrc file was removed; there was no compatibility reason for it.
+- D-044: engines.node is ">=22.0.0" instead of "22.x" so a developer on a newer Node (for example 26) is not blocked or warned. Vercel's Node version is set in the Vercel project settings.
+- D-045: next.config.mjs and eslint.config.mjs detect the installed Next major so the same files work on Next 15 and Next 16.
+- D-046: Supersedes D-042. The project moves to Next.js 16.3.8 (exact) with eslint-config-next 16.3.8, React 19.2, because the developer environment already runs Next 16.3.8 and Vercel builds the same line. middleware.ts is replaced by proxy.ts as Next 16 requires.
+- D-047: The ESLint configuration is the native flat config from eslint-config-next 16; @eslint/eslintrc is no longer needed.
+- D-048: Personal driver QR codes exist alongside shuttle codes. They are issued by the university administrator, point to the driver's current shuttle, and are revoked automatically when the driver is no longer approved. (This refines the earlier rule that the shuttle QR is not simply the driver's personal QR.)
+- D-049: Profile pictures live in a private bucket. Access is decided in the database (can_view_avatar) and pictures are shown through short-lived signed links.
+- D-050: At registration the server stores the driver's picture with the service role because the person may not have a session yet; failure never blocks registration.
+- D-051: Pictures are shrunk in the browser and verified by file signature on the server; the browser-reported type is never trusted.
